@@ -348,19 +348,7 @@ def generate_daily_probability_step_function(mode, s_step,building_type, save_fi
         ps = [tup[1] for tup in steps_and_ps]
         assert sum(ps) == 1
 
-    elif building_type == "OB":
-        # Load the steps and probabilities
-        steps_and_ps = load_steps_and_ps(mode = mode, building_type = building_type, building = "non-residential")
-
-    elif building_type == "SC":
-        # Load the steps and probabilities
-        steps_and_ps = load_steps_and_ps(mode = mode, building_type = building_type, building = "non-residential")
-
-    elif building_type == "GS":
-        # Load the steps and probabilities
-        steps_and_ps = load_steps_and_ps(mode = mode, building_type = building_type, building = "non-residential")
-
-    elif building_type == "RE":
+    elif building_type in {"OB", "SC", "GS", "RE", "HOSPITAL", "UNI", "CULTURE", "SPORT", "RETAIL", "WORKSHOP"}:
         # Load the steps and probabilities
         steps_and_ps = load_steps_and_ps(mode = mode, building_type = building_type, building = "non-residential")
 
@@ -510,14 +498,14 @@ def generate_yearly_probabilities(initial_day, p_off_day, p_work_day,
         if building_type in ["SFH", "MFH", "TH", "AB", "OB"]:
             is_off_day = current_day in (5, 6) or (day + 1) in holidays  #(Office Building): Closed Saturdays, Sundays, and all holidays
 
-        elif building_type == "SC":
+        elif building_type in {"SC", "UNI"}:
             is_off_day = current_day in (5, 6) or (day + 1) in holidays or (182 <= day + 1 <= 212) #(School): Closed Saturdays, Sundays, all holidays, and during days 182-212
 
         elif building_type == "GS":
             is_off_day = current_day == 6 or (day + 1) in holidays #(Grocery store): Closed every Sunday and every holiday
 
-        elif building_type == "RE":
-            is_off_day = False  # (Restaurant): Never closed
+        elif building_type in {"RE", "HOSPITAL", "CULTURE", "SPORT", "RETAIL", "WORKSHOP"}:
+            is_off_day = False  # Never closed
 
         p_day = p_off_day if is_off_day else p_work_day
 
