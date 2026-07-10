@@ -222,6 +222,76 @@ def generate_dhw_profile(s_step, categories, mean_drawoff_vol_per_day, occupancy
 
     return timeseries_df
 
+def generate_dhw_profile_new(s_step, categories, mean_drawoff_vol_per_day, occupancy,  holidays, building_type,  weekend_weekday_factor, initial_day=0, occupancy_series = None):
+    """
+    Generates a DHW profile. The generation is split up in different
+    functions and generally follows the methodology described in the DHWcalc
+    paper from Uni Kassel.
+
+    1)  Load some data for the drawoff categories (cats_df).
+    2)  Generate a yearly probability profile
+    3)  Generate Drawoffs and distribute them randomly into the probability
+        profile p_norm_integral.
+    4)  Add some additionally stats to the dataframe.
+
+    :param s_step:                      int:    timestep width in seconds.
+    :param categories:                  int:    1 or 4 (see DHWcalc)
+    :param weekend_weekday_factor:      int:    taken from DHWcalc
+    :param mean_drawoff_vol_per_day:    int:    daily water demand in Liters
+    :param initial_day:                 int:    0:Mon - 1:Tues ... 6:Sun
+    :return: timeseries_df              df:     dataframe with all timeseries
+    """
+
+    mean_drawoff_vol_per_day *= occupancy
+
+    # --- holds statistic info about the drawoffs
+
+    cats_df = get_data_drawoff_categories(
+        s_step=s_step,
+        categories=categories,
+        mean_drawoff_vol_per_day=mean_drawoff_vol_per_day,
+        building_type=building_type
+    )
+
+    # --- deterministic function
+    timeseries_df = generate_yearly_probability_profile(
+        s_step=s_step,
+        weekend_weekday_factor=weekend_weekday_factor,
+        holidays = holidays,
+        initial_day=initial_day,
+        building_type=building_type
+    )
+
+    if hasattr(occupancy_series, '__len__'):
+        occ = np.array(occupancy_series)
+        print(len(occ))
+        times_diff = np.diff(timeseries_df.p_norm_integral, prepend=0)
+        print(len(times_diff))
+        masked_times_diff = occ * times_diff
+        masked_times_new = masked_times_diff / masked_times_diff.sum()
+        timeseries_df.p_norm_integral = np.cumsum(masked_times_new)
+
+
+    # --- empty drawoffs list, will be filled afterwards
+    timeseries_df['Water_LperH'] = [0] * int(365 * 24 * 3600 / s_step)
+
+    # --- for each category, generate and distribute drawoffs.
+    for i in range(len(cats_df)):
+        timeseries_df = generate_and_distribute_drawoffs(
+            timeseries_df=timeseries_df,
+            cats_series=cats_df.iloc[i],
+        )
+
+    # --- add some additional stats
+    timeseries_df['Water_L'] = timeseries_df['Water_LperH'] / 3600 * s_step
+    timeseries_df['method'] = 'OpenDHW'
+    timeseries_df['categories'] = categories
+    timeseries_df['initial_day'] = initial_day
+    timeseries_df['weekend_weekday_factor'] = weekend_weekday_factor
+    timeseries_df['mean_drawoff_vol_per_day'] = mean_drawoff_vol_per_day
+
+    return timeseries_df
+
 
 def get_data_drawoff_categories(s_step, categories, mean_drawoff_vol_per_day, building_type):
     """
@@ -282,7 +352,7 @@ def get_data_drawoff_categories(s_step, categories, mean_drawoff_vol_per_day, bu
         cats_df['drawoff_duration_min'] = int(s_step / 60)
 
         cats_df['conversion_factor'] = cats_df['drawoff_duration_min'] / \
-                                       cats_df['drawoff_duration_min_old']
+                                      cats_df['drawoff_duration_min_old']
 
         cats_df['mean_flow_rate_per_drawoff_LperH'] \
             = cats_df['mean_flow_rate_per_drawoff_LperH'] / cats_df[

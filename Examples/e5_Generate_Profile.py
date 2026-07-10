@@ -45,12 +45,12 @@ Non-residential buildings:
 
 # --- Parameters ---
 resample_method = False
-start_plot = '2019-03-31-06'
-end_plot = '2019-03-31-09'
+start_plot = '2026-03-31-06'
+end_plot = '2026-03-31-09'
 building_type = "SFH"  # "SFH", "TH", "MFH", "AB", "SC", "OB", "GS", "RE"
 
 # --- Constants ---
-holidays = OpenDHW.get_holidays(country_code = "DE", year = 2019) # Get the holiday data for the specified country, state and year.
+holidays = OpenDHW.get_holidays(country_code = "DE", year = 2026) # Get the holiday data for the specified country, state and year.
 s_step = 60
 categories = 1
 occupancy = 5
